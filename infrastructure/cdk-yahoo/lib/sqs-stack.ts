@@ -9,10 +9,23 @@ export class YahooPostQueueStack extends Stack {
   constructor(scope: Construct, id: string, props?: StackProps) {
     super(scope, id, props);
 
-    this.yahooPostQueue = new Queue(this, 'YahooPostQueue', {
-      visibilityTimeout: cdk.Duration.seconds(30),
-      queueName: 'yahoo-post-queue',
-    });
+      // Dead Letter Queue
+      const dlq = new Queue(this, 'YahooPostDLQ', {
+        retentionPeriod: cdk.Duration.days(4),
+        queueName: 'yahoo-post-dlq',
+      });
+
+      this.yahooPostQueue = new Queue(this, 'YahooPostQueue', {
+        visibilityTimeout: cdk.Duration.seconds(180), // 3 minutes
+        retentionPeriod: cdk.Duration.days(4),
+        maxMessageSizeBytes: 262144, // 256 KB
+        receiveMessageWaitTime: cdk.Duration.seconds(20),
+        deadLetterQueue: {
+          maxReceiveCount: 5,
+          queue: dlq,
+        },
+        queueName: 'yahoo-post-queue',
+      });
   }
 }
 
@@ -25,7 +38,7 @@ export class YahooPostQueueStack extends Stack {
 //   "yahooPostDetail": {
 //     "title": "コンバージョンミエルカ",
 //     "feedType": "NOTICE",
-//     "description": "Webサイトに訪問するユーザーの情報を解析し、そのユーザーに適したコンテンツを提供することでサイト内の回遊率アップやコンバージョン率アップを促進します。サイト分析や制作の知識が無い方でも、管理画面からノーコードで簡単にポップアップやバナー表示によりWeb接客施策を実行可能です。\n 業種・利用用途に特化したテンプレートが100種以上あるので、初めての方でもパーソナライズ施策で簡単に効果を出すことができます。",
+//     "description": "Webサイトに訪問するユーザーの情報を解析",
 //     "startDateTime": "2025-05-23T19:48:27",
 //     "mediaUrl": "",
 //     "isPinned": false
